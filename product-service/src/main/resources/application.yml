@@ -1,0 +1,19 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: product-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/products}
+    username: ${DB_USER:app}
+    password: ${DB_PASSWORD:app}
+  jpa:
+    hibernate:
+      ddl-auto: update   # Öğrenme projesi için yeterli. Gerçek projede Flyway/Liquibase.
+    open-in-view: false
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    username: ${RABBIT_USER:app}
+    password: ${RABBIT_PASSWORD:app}

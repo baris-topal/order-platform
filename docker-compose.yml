@@ -1,0 +1,78 @@
+# HAFTA 3-4: Tüm sistemi tek komutla ayağa kaldırma
+#   docker compose up --build
+# RabbitMQ yönetim paneli: http://localhost:15672  (app / app)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: app
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/products   # localhost değil, servis adı!
+      DB_USER: app
+      DB_PASSWORD: app
+      RABBIT_HOST: rabbitmq
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # TODO (Hafta 3 - alıştırma): order-service/Dockerfile'ı yaz (product-service'inkine bak),
+  # sonra bu bloğu aç. PRODUCT_SERVICE_URL neden http://product-service:8081 ?
+  #
+  # order-service:
+  #   build:
+  #     context: .
+  #     dockerfile: order-service/Dockerfile
+  #   environment:
+  #     DB_URL: jdbc:postgresql://postgres:5432/orders
+  #     DB_USER: app
+  #     DB_PASSWORD: app
+  #     RABBIT_HOST: rabbitmq
+  #     PRODUCT_SERVICE_URL: http://product-service:8081
+  #   ports:
+  #     - "8082:8082"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     product-service:
+  #       condition: service_started
+
+volumes:
+  pgdata:
